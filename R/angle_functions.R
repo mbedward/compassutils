@@ -117,21 +117,22 @@ cartesian2compass <- function(x, degrees = TRUE) {
 }
 
 
-#' Determine if a location is up-wind of a reference point
+#' Determine if a point location is up-wind of a reference point
 #'
 #' Given a reference point location \code{p0} and one or more query point
 #' locations \code{pquery}, together with a prevailing wind direction, this
 #' function determines whether each query point is up-wind of the reference
-#' point. To be up-wind, a query point must lie strictly within an angular
-#' sector centred on the direction from which the wind is coming. By default,
-#' the sector width is 180 degrees (i.e. 90 degrees either side of the wind
-#' direction) but this can be decreased if a stricter interpretation of
-#' 'up-wind' is desired.
-#'
-#' To accord with the standard meteorological convention, the wind direction
-#' argument \code{wdir} should always be expressed as a compass bearing in
+#' point. To be up-wind, a query point must lie strictly within an angular range
+#' centred on the direction from which the wind is coming. By default, the range
+#' is set to 90 degrees either side of the wind direction, but this can be
+#' decreased for a stricter interpretation of 'up-wind'. To accord with the
+#' standard meteorological convention, the wind direction value
+#' \code{wdir_degrees} should always be expressed as a compass bearing in
 #' degrees, representing the direction from which the wind is blowing, e.g. 270
 #' degrees for a westerly wind with air flow from west to east.
+#'
+#' Note that this function \strong{assumes} that wind direction and the range
+#' up-wind bearings are both expressed in degrees.
 #'
 #' @param p0 The reference point. Either a two-element vector of X-Y
 #'   coordinates, an \code{sf} point geometry object, a single element from an
@@ -148,12 +149,17 @@ cartesian2compass <- function(x, degrees = TRUE) {
 #'   the wind is coming, e.g. 270 degrees means a westerly wind with air flow
 #'   from west to east.
 #'
-#' @param sector_width Angular width (degrees) of the query sector. The default
-#'   and maximum allowable value is 180.
+#' @param halfspan The angular range (degrees) either side of the wind angle for
+#'   a bearing to be considered up-wind. Must be in the range \code{[0, 180]}.
+#'   The default value is 90 degrees for a semi-circle centred on the wind
+#'   direction.
 #'
 #' @export
 #
-is_upwind <- function(p0, pquery, wdir_degrees, sector_width = 180, compass = TRUE) {
+point_is_upwind <- function(p0, pquery, wdir_degrees, halfspan = 90) {
+  checkmate::assert_number(wdir_degrees, finite = TRUE)
+  checkmate::assert_number(halfspan, finite = TRUE, lower = 0, upper = 180)
+
   res <- .points_as_matrix(p0)
   p0_coords <- res$coords
   if (nrow(p0_coords) != 1) stop("There should only be one reference point (p0)")
@@ -167,49 +173,73 @@ is_upwind <- function(p0, pquery, wdir_degrees, sector_width = 180, compass = TR
   pquery_coords <- res$coords
   pquery_CRS <- res$crs
 
-  sector_start <- wdir_degrees - sector_width / 2
-  sector_end <- wdir_degrees + sector_width / 2
-
-  in_sector <- apply(pquery_coords, MARGIN = 1, FUN = function(pq) {
-    dir <- get_compass_direction(p0_coords, pq)
-    angle_in_sector(dir, sector_start, sector_end, degrees = TRUE)
+  upwind <- sapply(seq_len(nrow(pquery_coords)), function(i) {
+    dir <- get_compass_direction(p0_coords, pquery_coords[i,])
+    angle_in_range(dir, wdir_degrees, halfspan, degrees = TRUE)
   })
 
-  in_sector
+  upwind
 }
 
 
-#' Determine if an angle lies within a sector
+#' Test if angles are within a given angular range
 #'
-#' The sector is defined as the angular range proceeding clockwise from the
-#' start angle to the end angle.
+#' This function is intended to help with queries such as 'is a given compass
+#' bearing within x degrees of west' or 'is a given location markedly up-wind of
+#' our present position'. Given one or more input angles (e.g. compass
+#' bearings), it determines whether each lies within an angular range centred on
+#' the angle \code{mid} and ranging \code{halfspan} angular units either side.
+#' By default, the function assumes angular units are degrees for working with
+#' compass bearings. Set the \code{degrees} argument to \code{FALSE} if working
+#' with values in radians.
 #'
-#' It is up to the user to ensure that the test and sector angles are either all
-#' compass bearings or all Cartesian angles. Terrible things will happen
-#' otherwise.
+#' @param x A numeric vector of one or more angles to check.
 #'
-#' @param x One or more angles to check.
+#' @param mid A single numeric value for the middle angle of the sector.
 #'
-#' @param start The start angle of the sector
-#'
-#' @param end The end angle of the sector
+#' @param halfspan A single numeric value in the range \code{[0, 360]} (if
+#'   \code{degrees=TRUE}) or \code{[0, 2*pi]} (if \code{degrees=FALSE})
+#'   representing the angular range either side of \code{mid}. Normally this
+#'   will be a positive value representing a finite angular range. A zero value
+#'   is allowed although this would simply result in an equality check between
+#'   the input \code{x} angles and the \code{mid} angle. Any value smaller than
+#'   \code{sqrt(.Machine$double.eps)} will be treated as zero.
 #'
 #' @param degrees (logical) If \code{TRUE} (default), all values are treated as
 #'   angles in degrees. Set to \code{FALSE} if values should be treated as
 #'   radians.
 #'
-#' @return \code{TRUE} if the angle lies within the sector.
+#' @return A logical vector with an element for each input angle, where
+#'   \code{TRUE} indicates the angle lies within the sector.
+#'
+#' @examples
+#' # Determine which of a set of compass bearings represent up-wind directions,
+#' # given a prevailing north-westerly wind (315 degrees) and treating
+#' # 'up-wind' as any bearing within 60 degrees either side of the wind
+#' # direction.
+#' #
+#' bearings <- seq(0, 359, 22.5)
+#' upwind <- angle_in_range(bearings, 315, 60)
+#'
+#' # display input bearings and up-wind status as a data frame
+#' data.frame(bearings, upwind)
 #'
 #' @export
 #'
-angle_in_sector <- function(x, start, end, degrees = TRUE) {
+angle_in_range <- function(x, mid, halfspan, degrees = TRUE) {
+  checkmate::assert_numeric(x, finite = TRUE)
+  checkmate::assert_number(mid, finite = TRUE)
+  checkmate::assert_flag(degrees)
+
   if (degrees) {
     x <- deg2rad(x)
-    start <- deg2rad(start)
-    end <- deg2rad(end)
+    mid <- deg2rad(mid)
+    halfspan <- deg2rad(halfspan)
   }
 
-  stop("WRITE ME!!!")
+  checkmate::assert_number(halfspan, finite = TRUE, lower = 0, upper = 2*pi)
+
+  cos(x - mid) > cos(halfspan)
 }
 
 
