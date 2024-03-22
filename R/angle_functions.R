@@ -261,14 +261,14 @@ angle_in_range <- function(x, mid, halfspan, degrees = TRUE) {
 #' @examples
 #' p0 <- c(700000, 6530000)
 #' p1 <- c(695000, 6535000) # a point north-west of p0
-#' get_compass_direction(p0, p1)  # returns 315 degrees
+#' get_compass_bearing(p0, p1)  # returns 315 degrees
 #'
 #' # If the two points are the same there is no valid direction
-#' get_compass_direction(p0, p0)  # returns NA
+#' get_compass_bearing(p0, p0)  # returns NA
 #'
 #' @export
 #
-get_compass_direction <- function(p0, p1) {
+get_compass_bearing <- function(p0, p1) {
   checkmate::assert_numeric(p0, len = 2, any.missing = FALSE, finite = TRUE)
   checkmate::assert_numeric(p1, len = 2, any.missing = FALSE, finite = TRUE)
 

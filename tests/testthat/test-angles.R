@@ -65,14 +65,14 @@ test_that("get_compass_direction works", {
     -1, 1, 315),
     ncol = 3, byrow = TRUE, dimnames = list(NULL, c("x", "y", "dir")))
 
-  dir <- apply(p1s, MARGIN = 1, FUN = function(x) { get_compass_direction(p0, x[1:2]) })
+  dir <- apply(p1s, MARGIN = 1, FUN = function(x) { get_compass_bearing(p0, x[1:2]) })
 
   testthat::expect_equal(dir, p1s[,"dir"])
 })
 
 test_that("get_compass_direction returns NA when points are the same", {
   p <- c(700000, 6500000)
-  dir <- get_compass_direction(p, p)
+  dir <- get_compass_bearing(p, p)
   testthat::expect_true(is.na(dir))
 })
 
