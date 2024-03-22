@@ -1,6 +1,7 @@
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/mbedward/compassutils/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/mbedward/compassutils/actions/workflows/R-CMD-check.yaml)
-[![Codecov test coverage](https://codecov.io/gh/mbedward/compassutils/branch/main/graph/badge.svg)](https://app.codecov.io/gh/mbedward/compassutils?branch=main)
+
+[![test-coverage](https://github.com/mbedward/compassutils/actions/workflows/test-coverage.yaml/badge.svg)](https://github.com/mbedward/compassutils/actions/workflows/test-coverage.yaml)
 <!-- badges: end -->
 
 ## compassutils
