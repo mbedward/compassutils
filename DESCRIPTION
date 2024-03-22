@@ -1,0 +1,23 @@
+Package: compassutils
+Title: Utilities for working with compass and map bearings
+Version: 0.0.0.9000
+Date: 2024-03-22
+Authors@R: 
+    person("Michael", "Bedward", , "michael.bedward@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-9986-1286"))
+Description: Provides some simple functions for working with map compass bearings
+    and converting between compass angles (0 is north, 90 is east etc.) and 
+    Cartesian angles (0 is east, 90 is north etc.) as used by R's trigonometric 
+    functions.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Depends: R (>= 4.0.0)
+Imports:
+    checkmate,
+    glue,
+    sf
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
