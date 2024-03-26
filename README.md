@@ -31,12 +31,12 @@ such as finding the compass bearing from one point to another, and testing
 whether a bearing lies within a specified angular range (useful when 
 working with wind direction data).
 
-The package is intended for use by myself and colleagues at the
+The package is being developed for use by myself and colleagues at the
 Centre for Environmental Risk Management of Bushfire, University of
-Wollongong. Everyone is free to use it but please treat it as a very
-early work-in-progress, and beware that any and all code is liable to
-change in the 0.x versions. Suggestions, bug reports and pull requests
-are very welcome.
+Wollongong but everyone is free to use it. Suggestions, bug reports and 
+pull requests are very welcome. Please treat the package as an early 
+work-in-progress and be aware that the code is liable to change without
+notice in the 0.x versions. 
 
 ## Installation
 
