@@ -42,5 +42,6 @@ p0 <- c(305170, 6190800)
 # bearing of 10 degrees (slightly east of north)
 #
 ptarget <- get_target_point(p0, bearing = 10, distance = 170)
+cat("Target point coordinates:", ptarget)
 
 }

@@ -333,6 +333,7 @@ get_compass_bearing <- function(p0, p1) {
 #' # bearing of 10 degrees (slightly east of north)
 #' #
 #' ptarget <- get_target_point(p0, bearing = 10, distance = 170)
+#' cat("Target point coordinates:", ptarget)
 #'
 #' @export
 #'
@@ -345,7 +346,7 @@ get_target_point <- function(p0, bearing, distance, degrees = TRUE) {
 
   # If we know the CRS of the reference point, check that it is projected
   p0crs <- attr(p0, "crs")
-  if (sf::st_is_longlat(p0crs)) {
+  if (!is.na(p0crs) && sf::st_is_longlat(p0crs)) {
     stop("Reference point p0 must have projected coordinates, not geographic (lon-lat)")
   }
 
