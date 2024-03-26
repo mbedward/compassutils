@@ -117,22 +117,23 @@ cartesian2compass <- function(x, degrees = TRUE) {
 }
 
 
-#' Determine if a point location is up-wind of a reference point
+#' Determine if point locations are up-wind of a reference point
 #'
-#' Given a reference point location \code{p0} and one or more query point
-#' locations \code{pquery}, together with a prevailing wind direction, this
-#' function determines whether each query point is up-wind of the reference
-#' point. To be up-wind, a query point must lie strictly within an angular range
-#' centred on the direction from which the wind is coming. By default, the range
-#' is set to 90 degrees either side of the wind direction, but this can be
-#' decreased for a stricter interpretation of 'up-wind'. To accord with the
-#' standard meteorological convention, the wind direction value
+#' Given a single reference point location \code{p0} and one or more query point
+#' locations \code{pquery}, together with a prevailing wind direction, determine
+#' whether each query point is up-wind of the reference point. This function is
+#' simply a short-cut to calling functions \code{get_compass_bearing()} and
+#' \code{angle_in_range()}. To be up-wind, a query point must lie within an
+#' angular range centred on the direction from which the wind is coming. By
+#' default, the range is set to 90 degrees either side of the wind direction,
+#' but this can be decreased for a stricter interpretation of 'up-wind'. To
+#' accord with the standard meteorological convention, the wind direction value
 #' \code{wdir_degrees} should always be expressed as a compass bearing in
 #' degrees, representing the direction from which the wind is blowing, e.g. 270
 #' degrees for a westerly wind with air flow from west to east.
 #'
-#' Note that this function \strong{assumes} that wind direction and the range
-#' up-wind bearings are both expressed in degrees.
+#' Note that this function \strong{assumes} that wind direction, \code{wdir},
+#' and the \code{halfspan} arguments are both expressed in degrees.
 #'
 #' @param p0 The reference point. Either a two-element vector of X-Y
 #'   coordinates, an \code{sf} point geometry object, a single element from an
@@ -154,51 +155,50 @@ cartesian2compass <- function(x, degrees = TRUE) {
 #'   The default value is 90 degrees for a semi-circle centred on the wind
 #'   direction.
 #'
+#' @param strict (logical; default TRUE) Whether bearings must be strictly
+#'   within the angular range defined by \code{halfspan}. See
+#'   \code{\link{angle_in_range}} for more explanation.
+#'
 #' @export
 #
-point_is_upwind <- function(p0, pquery, wdir_degrees, halfspan = 90) {
+is_upwind <- function(p0, pquery, wdir_degrees, halfspan = 90, strict = TRUE) {
   checkmate::assert_number(wdir_degrees, finite = TRUE)
   checkmate::assert_number(halfspan, finite = TRUE, lower = 0, upper = 180)
 
-  res <- .points_as_matrix(p0)
-  p0_coords <- res$coords
+  p0_coords <- .points_as_matrix(p0)
   if (nrow(p0_coords) != 1) stop("There should only be one reference point (p0)")
+
+  p0_CRS <- attr(p0_coords, "crs")
 
   # Store p0 as a vector rather than a matrix
   p0_coords <- c(p0_coords)
 
-  p0_CRS <- res$crs
+  pquery_coords <- .points_as_matrix(pquery)
+  pquery_CRS <- attr(pquery_coords, "crs")
 
-  res <- .points_as_matrix(pquery)
-  pquery_coords <- res$coords
-  pquery_CRS <- res$crs
-
-  upwind <- sapply(seq_len(nrow(pquery_coords)), function(i) {
-    dir <- get_compass_direction(p0_coords, pquery_coords[i,])
-    angle_in_range(dir, wdir_degrees, halfspan, degrees = TRUE)
+  sapply(seq_len(nrow(pquery_coords)), function(i) {
+    b <- get_compass_bearing(p0_coords, pquery_coords[i,])
+    angle_in_range(b, wdir_degrees, halfspan, degrees = TRUE, strict = strict)
   })
-
-  upwind
 }
 
 
-#' Test if angles are within a given angular range
+#' Test if one or more angles lie strictly within a given angular range
 #'
 #' This function is intended to help with queries such as 'is a given compass
 #' bearing within x degrees of west' or 'is a given location markedly up-wind of
 #' our present position'. Given one or more input angles (e.g. compass
 #' bearings), it determines whether each lies within an angular range centred on
-#' the angle \code{mid} and ranging \code{halfspan} angular units either side.
-#' By default, the function assumes angular units are degrees for working with
-#' compass bearings. Set the \code{degrees} argument to \code{FALSE} if working
-#' with values in radians.
+#' the angle \code{mid} and extended for \code{halfspan} angular units either
+#' side. The end-points of the range (i.e. \code{mid +- halfspan}) are treated
+#' as outside by default. To treat them as included, set \code{strict=FALSE}.
 #'
 #' @param x A numeric vector of one or more angles to check.
 #'
 #' @param mid A single numeric value for the middle angle of the sector.
 #'
-#' @param halfspan A single numeric value in the range \code{[0, 360]} (if
-#'   \code{degrees=TRUE}) or \code{[0, 2*pi]} (if \code{degrees=FALSE})
+#' @param halfspan A single numeric value in the range \code{[0, 180]} (if
+#'   \code{degrees=TRUE}) or \code{[0, pi]} (if \code{degrees=FALSE})
 #'   representing the angular range either side of \code{mid}. Normally this
 #'   will be a positive value representing a finite angular range. A zero value
 #'   is allowed although this would simply result in an equality check between
@@ -209,13 +209,17 @@ point_is_upwind <- function(p0, pquery, wdir_degrees, halfspan = 90) {
 #'   angles in degrees. Set to \code{FALSE} if values should be treated as
 #'   radians.
 #'
+#' @param strict (logical) If \code{TRUE} (default), the end-points of the
+#'   angular range are treated as outside. Set to \code{FALSE}, to treat
+#'   end-points as within the range.
+#'
 #' @return A logical vector with an element for each input angle, where
 #'   \code{TRUE} indicates the angle lies within the sector.
 #'
 #' @examples
 #' # Determine which of a set of compass bearings represent up-wind directions,
 #' # given a prevailing north-westerly wind (315 degrees) and treating
-#' # 'up-wind' as any bearing within 60 degrees either side of the wind
+#' # 'up-wind' as any bearing strictly within 60 degrees either side of the wind
 #' # direction.
 #' #
 #' bearings <- seq(0, 359, 22.5)
@@ -226,10 +230,19 @@ point_is_upwind <- function(p0, pquery, wdir_degrees, halfspan = 90) {
 #'
 #' @export
 #'
-angle_in_range <- function(x, mid, halfspan, degrees = TRUE) {
+angle_in_range <- function(x, mid, halfspan, degrees = TRUE, strict = TRUE) {
   checkmate::assert_numeric(x, finite = TRUE)
   checkmate::assert_number(mid, finite = TRUE)
   checkmate::assert_flag(degrees)
+  checkmate::assert_flag(strict)
+
+  # upper bound on halfspan
+  if (degrees) max_upper <- 180
+  else max_upper <- pi
+
+  checkmate::assert_number(halfspan, finite = TRUE, lower = 0, upper = max_upper)
+
+  if (halfspan < sqrt(.Machine$double.eps)) halfspan <- 0
 
   if (degrees) {
     x <- deg2rad(x)
@@ -237,9 +250,8 @@ angle_in_range <- function(x, mid, halfspan, degrees = TRUE) {
     halfspan <- deg2rad(halfspan)
   }
 
-  checkmate::assert_number(halfspan, finite = TRUE, lower = 0, upper = 2*pi)
-
-  cos(x - mid) > cos(halfspan)
+  if (strict) cos(x - mid) > cos(halfspan)
+  else cos(x - mid) >= cos(halfspan)
 }
 
 
@@ -287,78 +299,62 @@ get_compass_bearing <- function(p0, p1) {
 }
 
 
-# Private helper function for is_upwind()
-#
-# Takes an object representing point locations which should be a vector (1
-# point), a matrix or an sf object of some kind. Records the CRS (if an sf
-# object) and retrieves point coordinates as a matrix.
-#
-.points_as_matrix <- function(x) {
-  varname <- deparse1(substitute(x))
+#' Find a target point at a given bearing and distance from a reference point
+#'
+#' Given a reference point \code{p0}, find the coordinates of a target point
+#' located at a given compass bearing and distance from \code{p0}.
+#'
+#' @note This function currently only useful for points in projected coordinate
+#'   systems, not geographic (longitude, latitude) coordinates.
+#'
+#' @param p0 The reference point. Either a two-element vector of X-Y
+#'   coordinates, an \code{sf} point geometry object, a single element from an
+#'   \code{sfc} point geometry list or a single record from an \code{sf} spatial
+#'   data frame.
+#'
+#' @param bearing The compass direction from p0 to the target point.
+#'
+#' @param distance Distance to the new point. Generally, this will be a positive
+#'   value. If zero, the function simply returns the reference point
+#'   coordinates. If negative, a point in the opposite direction to that
+#'   specified by the \code{bearing} will be returned.
+#'
+#' @param degrees (logical) If \code{TRUE} (default), all bearings are treated
+#'   as compass angles in degrees. Set to \code{FALSE} if values should be
+#'   treated as radians.
+#'
+#' @return A two-element vector with the coordinates of the target point.
+#'
+#' @examples
+#' # Reference point coordinates (assuming map units are metres)
+#' p0 <- c(305170, 6190800)
+#'
+#' # Find the target point 170 metres from the reference point along a compass
+#' # bearing of 10 degrees (slightly east of north)
+#' #
+#' ptarget <- get_target_point(p0, bearing = 10, distance = 170)
+#'
+#' @export
+#'
+get_target_point <- function(p0, bearing, distance, degrees = TRUE) {
+  checkmate::assert_number(bearing, finite = TRUE)
+  checkmate::assert_number(distance, finite = TRUE)
 
-  x_CRS <- sf::st_crs(NA)
+  p0 <- .points_as_matrix(p0)
+  if (nrow(p0) != 1) stop("Only one reference point (p0) can be provided")
 
-  if (is.numeric(x)) {
-    # vector or matrix
-    if (is.vector(x)) {
-      .do_check(checkmate::check_numeric,
-                args = list(x = x, len = 2, any.missing = FALSE, finite = TRUE),
-                varname = varname)
-
-      x <- matrix(x, nrow = 1)
-    }
-
-    .do_check(checkmate::check_matrix,
-              args = list(x = x, ncols = 2, any.missing = FALSE),
-              varname = varname)
-
-  } else if (inherits(x, "sfc") || inherits(x, "sf")) {
-    # Some sort of sf spatial data object
-    if (!all(sf::st_geometry_type(x) == "POINT")) {
-      stop("Point data provided as an 'sfc' or 'sf' object must have 'POINT' geometry type")
-    }
-
-    x_CRS <- sf::st_crs(x)
-
-    # Get point coordinates as a matrix
-    x <- sf::st_coordinates(x)[, 1:2]
-
-  } else {
-    # Something other than point coordinates or an sf object was provided
-    msg <- glue::glue("Invalid type for point data argument {varname}: {class(x)}")
-    stop(msg)
+  # If we know the CRS of the reference point, check that it is projected
+  p0crs <- attr(p0, "crs")
+  if (sf::st_is_longlat(p0crs)) {
+    stop("Reference point p0 must have projected coordinates, not geographic (lon-lat)")
   }
 
-  # Return point coordinates and (possibly) the CRS
-  list(coords = x, crs = x_CRS)
-}
+  bcart <- compass2cartesian(bearing, degrees = degrees)
 
-
-# Private helper function to run a checkmate::check_* function with a given set
-# of arguments. Its main purpose is to provide an error message with a specified
-# variable name when called from some way down a chain of functions.
-#
-.do_check <- function(fn, args, varname) {
-  res <- do.call(fn, args)
-  if (isTRUE(res)) {
-    TRUE
-  } else {
-    msg <- glue::glue("Problem with argument {varname}: {res}")
-    stop(msg)
+  if (degrees) {
+    bcart <- deg2rad(bcart)
   }
-}
 
-
-# Private function to convert a two-column matrix of coordinates to a list of
-# point geometries. No CRS is applied or assumed.
-#
-.matrix_to_points <- function(mat) {
-  stopifnot(ncol(mat) == 2)
-
-  p <- lapply(seq_len(nrow(mat)), function(i) {
-    sf::st_point(mat[i,])
-  })
-
-  sf::st_sfc(p)
+  p0 + c(distance * cos(bcart), distance * sin(bcart))
 }
 

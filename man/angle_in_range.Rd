@@ -2,17 +2,17 @@
 % Please edit documentation in R/angle_functions.R
 \name{angle_in_range}
 \alias{angle_in_range}
-\title{Test if angles are within a given angular range}
+\title{Test if one or more angles lie strictly within a given angular range}
 \usage{
-angle_in_range(x, mid, halfspan, degrees = TRUE)
+angle_in_range(x, mid, halfspan, degrees = TRUE, strict = TRUE)
 }
 \arguments{
 \item{x}{A numeric vector of one or more angles to check.}
 
 \item{mid}{A single numeric value for the middle angle of the sector.}
 
-\item{halfspan}{A single numeric value in the range \code{[0, 360]} (if
-\code{degrees=TRUE}) or \code{[0, 2*pi]} (if \code{degrees=FALSE})
+\item{halfspan}{A single numeric value in the range \code{[0, 180]} (if
+\code{degrees=TRUE}) or \code{[0, pi]} (if \code{degrees=FALSE})
 representing the angular range either side of \code{mid}. Normally this
 will be a positive value representing a finite angular range. A zero value
 is allowed although this would simply result in an equality check between
@@ -22,6 +22,10 @@ the input \code{x} angles and the \code{mid} angle. Any value smaller than
 \item{degrees}{(logical) If \code{TRUE} (default), all values are treated as
 angles in degrees. Set to \code{FALSE} if values should be treated as
 radians.}
+
+\item{strict}{(logical) If \code{TRUE} (default), the end-points of the
+angular range are treated as outside. Set to \code{FALSE}, to treat
+end-points as within the range.}
 }
 \value{
 A logical vector with an element for each input angle, where
@@ -32,15 +36,14 @@ This function is intended to help with queries such as 'is a given compass
 bearing within x degrees of west' or 'is a given location markedly up-wind of
 our present position'. Given one or more input angles (e.g. compass
 bearings), it determines whether each lies within an angular range centred on
-the angle \code{mid} and ranging \code{halfspan} angular units either side.
-By default, the function assumes angular units are degrees for working with
-compass bearings. Set the \code{degrees} argument to \code{FALSE} if working
-with values in radians.
+the angle \code{mid} and extended for \code{halfspan} angular units either
+side. The end-points of the range (i.e. \code{mid +- halfspan}) are treated
+as outside by default. To treat them as included, set \code{strict=FALSE}.
 }
 \examples{
 # Determine which of a set of compass bearings represent up-wind directions,
 # given a prevailing north-westerly wind (315 degrees) and treating
-# 'up-wind' as any bearing within 60 degrees either side of the wind
+# 'up-wind' as any bearing strictly within 60 degrees either side of the wind
 # direction.
 #
 bearings <- seq(0, 359, 22.5)

@@ -23,7 +23,7 @@ knitr::opts_chunk$set(
 
 This package provides some simple functions for working with map and compass bearings. In particular, it tries to help avoid any confusion between compass angles, where 0 degrees is north and positive angles proceed clockwise, and Cartesian angles where zero is the direction of the positive X-axis and angles proceed anti-clockwise. 
 
-<img src = "man/figures/compass_points.png" align = "left" />
+<img src = "man/figures/README-compass-cartesian.png" align = "left" />
 
 **Terrible things will happen when you confuse these two systems!**
 
@@ -37,8 +37,8 @@ The package is mainly intended for use by myself and colleagues at the Centre fo
 You can install the development version of compassutils from [GitHub](https://github.com/) with:
 
 ``` r
-# install.packages("devtools")
-devtools::install_github("mbedward/compassutils")
+# install.packages("remotes")
+remotes::install_github("mbedward/compassutils")
 ```
 
 ## Some examples
