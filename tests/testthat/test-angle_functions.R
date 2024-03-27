@@ -114,10 +114,40 @@ test_that("get_compass_bearing works", {
   expect_equal(dir, p1s[,"dir"])
 })
 
+
 test_that("get_compass_bearing returns NA when points are the same", {
-  p <- c(700000, 6500000)
+  p <- c(305170, 6190800)
   dir <- get_compass_bearing(p, p)
   expect_true(is.na(dir))
+})
+
+
+test_that("get_compass_bearing agrees with get_target_point", {
+  p0 <- c(305170, 6190800)
+
+  N <- 100
+  bearings <- runif(N, 0, 360)
+
+  observed <- sapply(bearings, function(b) {
+    p <- get_target_point(p0, bearing = b, distance = 100)
+    get_compass_bearing(p0, p)
+  })
+
+  expect_equal(observed, bearings)
+})
+
+
+test_that("get_target_point works with zero distance", {
+  p0 <- c(305170, 6190800)
+  N <- 100
+  bearings <- runif(N, 0, 360)
+
+  same_as_p0 <- sapply(bearings, function(b) {
+    p <- get_target_point(p0, bearing = b, distance = 0) # note zero distance
+    isTRUE(all.equal(p, p0, check.attributes = FALSE))
+  })
+
+  expect_true(all(same_as_p0))
 })
 
 
@@ -138,10 +168,29 @@ test_that("angle_in_range works", {
 })
 
 
-# test_that("is_upwind works for a single query point", {
-#   # reference point
-#   p0 <- c(305170, 6190800)
-#
-# })
+test_that("is_upwind works", {
+  # reference point
+  p0 <- c(305170, 6190800)
+
+  # wind direction north-west, compass degrees
+  wdir <- 315
+
+  # generate points at random bearings from p0 and test each
+  # for being up-wind, setting the angular range half-span to 30 degrees
+  N <- 100
+  halfspan <- 30
+  bearings <- runif(N, 0, 360)
+
+  res <- sapply(bearings, function(b) {
+    p <- get_target_point(p0, bearing = b, distance = 100)
+
+    expected <- angle_in_range(b, wdir, halfspan = halfspan, strict = TRUE)
+    observed <- is_upwind(p0, p, wdir, halfspan = halfspan, strict = TRUE)
+
+    c(observed, expected)
+  })
+
+  expect_equal(res[1,], res[2,])
+})
 
 

@@ -350,6 +350,9 @@ get_target_point <- function(p0, bearing, distance, degrees = TRUE) {
     stop("Reference point p0 must have projected coordinates, not geographic (lon-lat)")
   }
 
+  # reduce single-row matrix for reference point coords to a 2-element vector
+  p0 <- c(p0)
+
   bcart <- compass2cartesian(bearing, degrees = degrees)
 
   if (degrees) {

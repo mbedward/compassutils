@@ -1,7 +1,7 @@
 Package: compassutils
 Title: Utilities for working with compass and map bearings
 Version: 0.0.0.9000
-Date: 2024-03-26
+Date: 2024-03-27
 Authors@R: 
     person("Michael", "Bedward", , "michael.bedward@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-9986-1286"))

@@ -14,11 +14,15 @@ This package provides some simple functions for working with map and
 compass bearings. In particular, it tries to help avoid any confusion
 between compass angles, where 0 degrees is north and positive angles
 proceed clockwise, and Cartesian angles where zero is the direction of
-the positive X-axis and angles proceed anti-clockwise.
-
-<img src = "man/figures/README-compass-cartesian.png" align = "left" />
+the positive X-axis and angles proceed anti-clockwise. Compass angles
+are almost always expressed in degrees while Cartesian angles are
+generally expressed in radians. The standard trigonometric functions in
+R such as `sin`, `cos` and `atan2` assume you are working with Cartesian
+angles, not compass bearings.
 
 **Terrible things happen when you confuse these two systems!**
+
+<img src = "man/figures/README-compass-cartesian.png" align = "left" />
 
 To help keep me (and you) safe from such things this package provides
 functions to convert between compass and Cartesian angles expressed as
@@ -72,4 +76,18 @@ get_compass_bearing(p0, p1)  # returns 315 degrees
 
 # If the two points are the same there is no valid bearing
 get_compass_bearing(p0, p0)  # returns NA
+```
+
+Get the coordinates of a point at a given distance and compass bearing
+from a reference point.
+
+``` r
+# The reference point
+p0 <- c(305170, 6190800)
+
+# Find the target point 170 metres from the reference point along a compass
+# bearing of 10 degrees (slightly east of north)
+#
+ptarget <- get_target_point(p0, bearing = 10, distance = 170, degrees = TRUE)
+cat("Target point coordinates:", ptarget)
 ```
