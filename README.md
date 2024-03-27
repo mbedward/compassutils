@@ -18,7 +18,7 @@ the positive X-axis and angles proceed anti-clockwise.
 
 <img src = "man/figures/README-compass-cartesian.png" align = "left" />
 
-**Terrible things will happen when you confuse these two systems!**
+**Terrible things happen when you confuse these two systems!**
 
 To help keep me (and you) safe from such things this package provides
 functions to convert between compass and Cartesian angles expressed as
