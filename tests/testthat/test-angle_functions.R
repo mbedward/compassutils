@@ -151,6 +151,25 @@ test_that("get_target_point works with zero distance", {
 })
 
 
+test_that("get_target_point works with negative distance", {
+  p0 <- c(305170, 6190800)
+  N <- 100
+  bearings <- runif(N, 0, 360)
+
+  ok <- sapply(bearings, function(b) {
+    # target point with negative distance
+    pneg <- get_target_point(p0, bearing = b, distance = -100)
+
+    # should be same point as positive distance in opposite direction
+    pexpected <- get_target_point(p0, bearing = b + 180, distance = 100)
+
+    isTRUE(all.equal(pneg, pexpected, check.attributes = FALSE))
+  })
+
+  expect_true(all(ok))
+})
+
+
 test_that("angle_in_range works", {
   mid <- 270
   halfspan <- 45
@@ -158,13 +177,13 @@ test_that("angle_in_range works", {
   # test angles
   x <- c(220, 225, 226, 270, 314, 315, 320)
 
-  # expected with default strict comparison
-  expected <- c(FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE)
+  # expected with default non-strict comparison
+  expected <- c(FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE)
   expect_equal(angle_in_range(x, mid, halfspan, degrees = TRUE), expected)
 
-  # expected with non-strict comparison
-  expected <- c(FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE)
-  expect_equal(angle_in_range(x, mid, halfspan, degrees = TRUE, strict = FALSE), expected)
+  # expected with strict comparison
+  expected <- c(FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE)
+  expect_equal(angle_in_range(x, mid, halfspan, degrees = TRUE, strict = TRUE), expected)
 })
 
 
@@ -194,3 +213,22 @@ test_that("is_upwind works", {
 })
 
 
+test_that("is_upwind works with zero half-span", {
+  # reference point
+  p0 <- c(305170, 6190800)
+
+  # wind direction north-west, compass degrees
+  wdir <- 315
+
+  # with zero half-span, only a point on the same bearing as the wind
+  # direction should be seen as up-wind
+  p <- get_target_point(p0, bearing = wdir, distance = 100)
+
+  observed <- is_upwind(p0, p, wdir, halfspan = 0, strict = FALSE)
+  expect_true(observed)
+
+  # but if strict=TRUE the function will always return FALSE with
+  # zero half-span
+  observed <- is_upwind(p0, p, wdir, halfspan = 0, strict = TRUE)
+  expect_false(observed)
+})

@@ -155,15 +155,16 @@ cartesian2compass <- function(x, degrees = TRUE) {
 #'   The default value is 90 degrees for a semi-circle centred on the wind
 #'   direction.
 #'
-#' @param strict (logical; default TRUE) Whether bearings must be strictly
+#' @param strict (logical; default FALSE) Whether bearings must be strictly
 #'   within the angular range defined by \code{halfspan}. See
 #'   \code{\link{angle_in_range}} for more explanation.
 #'
 #' @export
 #
-is_upwind <- function(p0, pquery, wdir_degrees, halfspan = 90, strict = TRUE) {
+is_upwind <- function(p0, pquery, wdir_degrees, halfspan = 90, strict = FALSE) {
   checkmate::assert_number(wdir_degrees, finite = TRUE)
   checkmate::assert_number(halfspan, finite = TRUE, lower = 0, upper = 180)
+  checkmate::assert_flag(strict)
 
   p0_coords <- .points_as_matrix(p0)
   if (nrow(p0_coords) != 1) stop("There should only be one reference point (p0)")
@@ -209,9 +210,14 @@ is_upwind <- function(p0, pquery, wdir_degrees, halfspan = 90, strict = TRUE) {
 #'   angles in degrees. Set to \code{FALSE} if values should be treated as
 #'   radians.
 #'
-#' @param strict (logical) If \code{TRUE} (default), the end-points of the
-#'   angular range are treated as outside. Set to \code{FALSE}, to treat
-#'   end-points as within the range.
+#' @param strict (logical) If \code{TRUE}, the end-points of the angular range
+#'   are treated as outside, thus the function is testing if the input angles
+#'   are less than \code{halfspan} units from \code{mid}. If \code{FALSE}
+#'   (default), the end-points are treated as being within the
+#'   range, thus the function is testing if the input angles are \emph{no more
+#'   than} \code{halfspan} units from \code{mid}. Note that in the degenerate case where \code{halfspan=0},
+#'   setting \code{strict=TRUE} would mean that the function always returns
+#'   \code{FALSE}, even if the input angle equals \code{mid}.
 #'
 #' @return A logical vector with an element for each input angle, where
 #'   \code{TRUE} indicates the angle lies within the sector.
@@ -230,7 +236,7 @@ is_upwind <- function(p0, pquery, wdir_degrees, halfspan = 90, strict = TRUE) {
 #'
 #' @export
 #'
-angle_in_range <- function(x, mid, halfspan, degrees = TRUE, strict = TRUE) {
+angle_in_range <- function(x, mid, halfspan, degrees = TRUE, strict = FALSE) {
   checkmate::assert_numeric(x, finite = TRUE)
   checkmate::assert_number(mid, finite = TRUE)
   checkmate::assert_flag(degrees)

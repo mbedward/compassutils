@@ -4,7 +4,7 @@
 \alias{angle_in_range}
 \title{Test if one or more angles lie strictly within a given angular range}
 \usage{
-angle_in_range(x, mid, halfspan, degrees = TRUE, strict = TRUE)
+angle_in_range(x, mid, halfspan, degrees = TRUE, strict = FALSE)
 }
 \arguments{
 \item{x}{A numeric vector of one or more angles to check.}
@@ -23,9 +23,14 @@ the input \code{x} angles and the \code{mid} angle. Any value smaller than
 angles in degrees. Set to \code{FALSE} if values should be treated as
 radians.}
 
-\item{strict}{(logical) If \code{TRUE} (default), the end-points of the
-angular range are treated as outside. Set to \code{FALSE}, to treat
-end-points as within the range.}
+\item{strict}{(logical) If \code{TRUE}, the end-points of the angular range
+are treated as outside, thus the function is testing if the input angles
+are less than \code{halfspan} units from \code{mid}. If \code{FALSE}
+(default), the end-points are treated as being within the
+range, thus the function is testing if the input angles are \emph{no more
+than} \code{halfspan} units from \code{mid}. Note that in the degenerate case where \code{halfspan=0},
+setting \code{strict=TRUE} would mean that the function always returns
+\code{FALSE}, even if the input angle equals \code{mid}.}
 }
 \value{
 A logical vector with an element for each input angle, where

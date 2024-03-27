@@ -4,7 +4,7 @@
 \alias{is_upwind}
 \title{Determine if point locations are up-wind of a reference point}
 \usage{
-is_upwind(p0, pquery, wdir_degrees, halfspan = 90, strict = TRUE)
+is_upwind(p0, pquery, wdir_degrees, halfspan = 90, strict = FALSE)
 }
 \arguments{
 \item{p0}{The reference point. Either a two-element vector of X-Y
@@ -27,7 +27,7 @@ a bearing to be considered up-wind. Must be in the range \code{[0, 180]}.
 The default value is 90 degrees for a semi-circle centred on the wind
 direction.}
 
-\item{strict}{(logical; default TRUE) Whether bearings must be strictly
+\item{strict}{(logical; default FALSE) Whether bearings must be strictly
 within the angular range defined by \code{halfspan}. See
 \code{\link{angle_in_range}} for more explanation.}
 }
