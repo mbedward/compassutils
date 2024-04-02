@@ -10,31 +10,35 @@
 [![test-coverage](https://github.com/mbedward/compassutils/actions/workflows/test-coverage.yaml/badge.svg)](https://github.com/mbedward/compassutils/actions/workflows/test-coverage.yaml)
 <!-- badges: end -->
 
-This package provides some simple functions for working with map and
-compass bearings. In particular, it tries to help avoid any confusion
-between compass angles, where 0 degrees is north and positive angles
-proceed clockwise, and Cartesian angles where zero is the direction of
-the positive X-axis and angles proceed anti-clockwise. Compass angles
-are almost always expressed in degrees while Cartesian angles are
-generally expressed in radians. The standard trigonometric functions in
-R such as `sin`, `cos` and `atan2` assume you are working with Cartesian
-angles, not compass bearings.
+R package for working with map and compass bearings.
+
+This package tries to help avoid the potential confusion between compass
+and Cartesian angles when working with spatial data. Compass angles
+(commonly referred to as compass bearings), define 0 degrees as north
+and positive angles proceed clockwise. In contrast, Cartesian angles
+define zero as the direction of the positive X-axis and angles proceed
+anti-clockwise. Compass angles are almost always expressed in degrees
+while Cartesian angles are generally expressed in radians.
+
+The standard trigonometric functions in R such as `sin`, `cos` and
+`atan2` assume you are working with Cartesian angles expressed in
+radians.
 
 **Terrible things happen when you confuse these two systems!**
 
 <img src = "man/figures/README-compass-cartesian.png" align = "left" />
 
 To help keep me (and you) safe from such things this package provides
-functions to convert between compass and Cartesian angles expressed as
-degrees or radians. There are also handy functions for other map- and
-compass-related tasks such as finding the bearing from one point to
-another, and testing whether a bearing lies within a specified angular
-range.
+functions to convert between compass and Cartesian angles, as well as
+other map- and compass-related tasks such as finding the bearing from
+one point to another, locating a point that lies at a given distance and
+bearing from a reference point, and testing whether a bearing lies
+within a specified angular range.
 
-The package is mainly intended for use by myself and colleagues at the
-Centre for Environmental Risk Management of Bushfire, University of
-Wollongong. Everyone is welcome to use it but please treat it as a very
-early work-in-progress. All code is liable to change without notice in
+The package is primarily intended for use at the Centre for
+Environmental Risk Management of Bushfire, University of Wollongong.
+Everyone is welcome to use it but please treat it as a very early
+work-in-progress. Any or all code is liable to change without notice in
 the 0.x versions.
 
 ## Installation
