@@ -94,24 +94,48 @@ test_that("can convert cartesian angles in radians to compass bearings", {
 })
 
 
-test_that("get_compass_bearing works", {
+test_that("get_compass_bearing works with coodinates", {
   p0 <- c(0, 0)
 
   # matrix of query points and expected directions from p0
   p1s <- matrix(c(
-    0, 1, 0,
-    1, 1, 45,
-    1, 0, 90,
-    1, -1, 135,
-    0, -1, 180,
-    -1, -1, 225,
-    -1, 0, 270,
-    -1, 1, 315),
-    ncol = 3, byrow = TRUE, dimnames = list(NULL, c("x", "y", "dir")))
+       0,  100,   0,
+     100,  100,  45,
+     100,    0,  90,
+     100, -100, 135,
+       0, -100, 180,
+    -100, -100, 225,
+    -100,    0, 270,
+    -100,  100, 315),
+    ncol = 3, byrow = TRUE, dimnames = list(NULL, c("x", "y", "bearing")))
 
-  dir <- apply(p1s, MARGIN = 1, FUN = function(x) { get_compass_bearing(p0, x[1:2]) })
+  bearing <- apply(p1s, MARGIN = 1, FUN = function(x) { get_compass_bearing(p0, x[1:2]) })
 
-  expect_equal(dir, p1s[,"dir"])
+  expect_equal(bearing, p1s[,"bearing"])
+})
+
+
+test_that("get_compass_bearing works with point features", {
+  p0 <- c(305170, 6190800)
+  p0_sf <- make_point_features(p0)
+
+  dxy <- matrix(c(
+       0,  100,   0,
+     100,  100,  45,
+     100,    0,  90,
+     100, -100, 135,
+       0, -100, 180,
+    -100, -100, 225,
+    -100,    0, 270,
+    -100,  100, 315),
+    ncol = 3, byrow = TRUE, dimnames = list(NULL, c("x", "y", "bearing")))
+
+  p <- dxy[, 1:2] + rep(p0, each = nrow(dxy))
+  p_sf <- make_point_features(p)
+
+  bearings <- get_compass_bearing(p0_sf, p_sf)
+
+  expect_equal(bearings, dxy[,"bearing"])
 })
 
 

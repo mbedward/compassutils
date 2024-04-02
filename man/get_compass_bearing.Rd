@@ -2,25 +2,28 @@
 % Please edit documentation in R/angle_functions.R
 \name{get_compass_bearing}
 \alias{get_compass_bearing}
-\title{Determine the compass bearing from one point to another}
+\title{Determine the compass bearing from one point to one or more other points}
 \usage{
-get_compass_bearing(p0, p1)
+get_compass_bearing(p0, pquery)
 }
 \arguments{
-\item{p0}{A two-element numeric vector of X-Y coordinates for the reference
-point.}
+\item{p0}{The reference point. Either a two-element vector of X-Y
+coordinates, an \code{sf} point geometry object, a single element from an
+\code{sfc} point geometry list or a single record from an \code{sf} spatial
+data frame.}
 
-\item{p1}{A two-element numeric vector of X-Y coordinates for the query
-point.}
+\item{pquery}{One or more query points. If there is only query point it can
+be provided in the same forms as described for \code{p0}. Multiple query
+points can be provided as a matrix of X-Y coordinates, an \code{sfc} point
+geometry list or an \code{sf} spatial data frame.}
 }
 \value{
 The compass bearing of p1 from p0 expressed in degrees, or \code{NA}
 if the two points are the same.
 }
 \description{
-Given a reference point p0 and a query point p1, each represented by a
-two-element vector of X:Y coordinates, find the compass bearing in degrees of
-p1 from reference point p0.
+Given a reference point \code{p0} and one or more query points \code{pquery},
+find the compass bearing in degrees of each query point from \code{p0}.
 }
 \examples{
 p0 <- c(700000, 6530000)

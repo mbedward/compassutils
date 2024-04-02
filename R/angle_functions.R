@@ -117,6 +117,73 @@ cartesian2compass <- function(x, degrees = TRUE) {
 }
 
 
+#' Determine the compass bearing from one point to one or more other points
+#'
+#' Given a reference point \code{p0} and one or more query points \code{pquery},
+#' find the compass bearing in degrees of each query point from \code{p0}.
+#'
+#' @param p0 The reference point. Either a two-element vector of X-Y
+#'   coordinates, an \code{sf} point geometry object, a single element from an
+#'   \code{sfc} point geometry list or a single record from an \code{sf} spatial
+#'   data frame.
+#'
+#' @param pquery One or more query points. If there is only query point it can
+#'   be provided in the same forms as described for \code{p0}. Multiple query
+#'   points can be provided as a matrix of X-Y coordinates, an \code{sfc} point
+#'   geometry list or an \code{sf} spatial data frame.
+#'
+#' @return The compass bearing of p1 from p0 expressed in degrees, or \code{NA}
+#'   if the two points are the same.
+#'
+#' @examples
+#' p0 <- c(700000, 6530000)
+#' p1 <- c(695000, 6535000) # a point north-west of p0
+#' get_compass_bearing(p0, p1)  # returns 315 degrees
+#'
+#' # If the two points are the same there is no valid direction
+#' get_compass_bearing(p0, p0)  # returns NA
+#'
+#' @export
+#
+get_compass_bearing <- function(p0, pquery) {
+  p0_coords <- .points_as_matrix(p0)
+  if (nrow(p0_coords) != 1) stop("There should only be one reference point (p0)")
+
+  p0_CRS <- attr(p0_coords, "crs")
+
+  # Store p0 as a vector rather than a matrix
+  p0_coords <- c(p0_coords)
+
+  pquery_coords <- .points_as_matrix(pquery)
+  pquery_CRS <- attr(pquery_coords, "crs")
+
+  sapply(seq_len(nrow(pquery_coords)), function(i) {
+    .get_compass_bearing_coords(p0_coords, pquery_coords[i,])
+  })
+}
+
+
+# Private helper function for get_compass_bearing()
+#
+.get_compass_bearing_coords <- function(p0_coords, p1_coords) {
+  checkmate::assert_numeric(p0_coords, len = 2, any.missing = FALSE, finite = TRUE)
+  checkmate::assert_numeric(p1_coords, len = 2, any.missing = FALSE, finite = TRUE)
+
+  # Check for degenerate case
+  if (isTRUE(all.equal(p0_coords, p1_coords, check.attributes = FALSE))) {
+    NA_real_
+  } else {
+    dxy <- unname(p1_coords - p0_coords)
+
+    # Cartesian angle in radians
+    angle <- atan2(y = dxy[2], x = dxy[1])
+
+    # Compass angle in degrees
+    rad2deg( cartesian2compass(angle, degrees = FALSE) )
+  }
+}
+
+
 #' Determine if point locations are up-wind of a reference point
 #'
 #' Given a single reference point location \code{p0} and one or more query point
@@ -258,50 +325,6 @@ angle_in_range <- function(x, mid, halfspan, degrees = TRUE, strict = FALSE) {
 
   if (strict) cos(x - mid) > cos(halfspan)
   else cos(x - mid) >= cos(halfspan)
-}
-
-
-#' Determine the compass bearing from one point to another
-#'
-#' Given a reference point p0 and a query point p1, each represented by a
-#' two-element vector of X:Y coordinates, find the compass bearing in degrees of
-#' p1 from reference point p0.
-#'
-#' @param p0 A two-element numeric vector of X-Y coordinates for the reference
-#'   point.
-#'
-#' @param p1 A two-element numeric vector of X-Y coordinates for the query
-#'   point.
-#'
-#' @return The compass bearing of p1 from p0 expressed in degrees, or \code{NA}
-#'   if the two points are the same.
-#'
-#' @examples
-#' p0 <- c(700000, 6530000)
-#' p1 <- c(695000, 6535000) # a point north-west of p0
-#' get_compass_bearing(p0, p1)  # returns 315 degrees
-#'
-#' # If the two points are the same there is no valid direction
-#' get_compass_bearing(p0, p0)  # returns NA
-#'
-#' @export
-#
-get_compass_bearing <- function(p0, p1) {
-  checkmate::assert_numeric(p0, len = 2, any.missing = FALSE, finite = TRUE)
-  checkmate::assert_numeric(p1, len = 2, any.missing = FALSE, finite = TRUE)
-
-  # Check for degenerate case
-  if (isTRUE(all.equal(p0, p1, check.attributes = FALSE))) {
-    NA_real_
-  } else {
-    dxy <- unname(p1 - p0)
-
-    # Cartesian angle in radians
-    angle <- atan2(y = dxy[2], x = dxy[1])
-
-    # Compass angle in degrees
-    rad2deg( cartesian2compass(angle, degrees = FALSE) )
-  }
 }
 
 
