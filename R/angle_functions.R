@@ -122,6 +122,12 @@ cartesian2compass <- function(x, degrees = TRUE) {
 #' Given a reference point \code{p0} and one or more query points \code{pquery},
 #' find the compass bearing in degrees of each query point from \code{p0}.
 #'
+#' If the inputs are \code{sf} point features, the function checks that they
+#' have the same coordinate reference system (see \code{\link[sf]{st_crs}}). If
+#' a CRS is not set for either of the inputs (e.g. numeric vectors of
+#' coordinates or points features for which \code{sf::st_crs()} returns
+#' \code{NA}) the function will assume that the coordinates are comparable.
+#'
 #' @param p0 The reference point. Either a two-element vector of X-Y
 #'   coordinates, an \code{sf} point geometry object, a single element from an
 #'   \code{sfc} point geometry list or a single record from an \code{sf} spatial
@@ -143,6 +149,18 @@ cartesian2compass <- function(x, degrees = TRUE) {
 #' # If the two points are the same there is no valid direction
 #' get_compass_bearing(p0, p0)  # returns NA
 #'
+#' # For sf point features, if either input has a coordinate reference
+#' # system set, the other input must match.
+#' \dontrun{
+#' p0 <- sf::st_point(p0) |>
+#'   sf::st_sfc(crs = 28356)
+#'
+#' p1 <- sf::st_point(p1) |>
+#'   sf::st_sfc(crs = 7856)
+#'
+#' get_compass_bearing(p0, p1)  # gives an error about CRS mis-match
+#' }
+#'
 #' @export
 #
 get_compass_bearing <- function(p0, pquery) {
@@ -156,6 +174,11 @@ get_compass_bearing <- function(p0, pquery) {
 
   pquery_coords <- .points_as_matrix(pquery)
   pquery_CRS <- attr(pquery_coords, "crs")
+
+  # Compare CRS of p0 with that of pquery, if defined.
+  # If neither have a CRS then sf `==` (implemented as sf:::Ops.crs) will
+  # return TRUE and we just hope for the best.
+  if (p0_CRS != pquery_CRS) stop("Reference point and query point(s) do not have the same CRS")
 
   sapply(seq_len(nrow(pquery_coords)), function(i) {
     .get_compass_bearing_coords(p0_coords, pquery_coords[i,])

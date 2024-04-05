@@ -25,6 +25,13 @@ if the two points are the same.
 Given a reference point \code{p0} and one or more query points \code{pquery},
 find the compass bearing in degrees of each query point from \code{p0}.
 }
+\details{
+If the inputs are \code{sf} point features, the function checks that they
+have the same coordinate reference system (see \code{\link[sf]{st_crs}}). If
+a CRS is not set for either of the inputs (e.g. numeric vectors of
+coordinates or points features for which \code{sf::st_crs()} returns
+\code{NA}) the function will assume that the coordinates are comparable.
+}
 \examples{
 p0 <- c(700000, 6530000)
 p1 <- c(695000, 6535000) # a point north-west of p0
@@ -32,5 +39,17 @@ get_compass_bearing(p0, p1)  # returns 315 degrees
 
 # If the two points are the same there is no valid direction
 get_compass_bearing(p0, p0)  # returns NA
+
+# For sf point features, if either input has a coordinate reference
+# system set, the other input must match.
+\dontrun{
+p0 <- sf::st_point(p0) |>
+  sf::st_sfc(crs = 28356)
+
+p1 <- sf::st_point(p1) |>
+  sf::st_sfc(crs = 7856)
+
+get_compass_bearing(p0, p1)  # gives an error about CRS mis-match
+}
 
 }

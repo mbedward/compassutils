@@ -139,6 +139,66 @@ test_that("get_compass_bearing works with point features", {
 })
 
 
+test_that("get_compass_bearing works with an sf data frame", {
+  p0 <- c(305170, 6190800)
+
+  dxy <- matrix(c(
+    0,  100,   0,
+    100,  100,  45,
+    100,    0,  90,
+    100, -100, 135,
+    0, -100, 180,
+    -100, -100, 225,
+    -100,    0, 270,
+    -100,  100, 315),
+    ncol = 3, byrow = TRUE, dimnames = list(NULL, c("x", "y", "bearing")))
+
+  p <- dxy[, 1:2] + rep(p0, each = nrow(dxy))
+
+  # Make an sf data frame for the query features
+  p_geoms <- make_point_features(p)
+  pquery <- sf::st_sf(index = seq_len(nrow(dxy)),
+                      expected_bearing = dxy[,3],
+                      geom = p_geoms)
+
+  # Pass p0 as a numeric vector and pquery as an sf data frame
+  bearings <- get_compass_bearing(p0, pquery)
+
+  expect_equal(bearings, pquery$expected_bearing)
+})
+
+
+test_that("get_compass_bearing checks CRS of both inputs", {
+  p0 <- c(305170, 6190800)
+  p1 <- p0 + c(-1000, 1000)
+
+  f <- function() {
+    get_compass_bearing(p0, p1)
+  }
+
+  # Case 1: inputs are vectors so no CRS for either input - this is allowed
+  expect_no_error(f())
+
+  # Case 2: inputs are point features with no CRS - this is allowed
+  p0 <- make_point_features(p0)
+  p1 <- make_point_features(p1)
+  expect_no_error(f())
+
+  # Case 3: same CRS defined for both features
+  sf::st_crs(p0) <- 28356
+  sf::st_crs(p1) <- 28356
+  expect_no_error(f())
+
+  # Case 4: CRS only defined for one feature - error
+  sf::st_crs(p1) <- NA
+  expect_error(f())
+
+  # Case 5: different CRSs for the two features - error
+  sf::st_crs(p1) <- 7856
+  expect_error(f())
+})
+
+
 test_that("get_compass_bearing returns NA when points are the same", {
   p <- c(305170, 6190800)
   dir <- get_compass_bearing(p, p)
