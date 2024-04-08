@@ -254,6 +254,48 @@ test_that("get_target_point works with negative distance", {
 })
 
 
+test_that("get_shortest_compass_rotation works", {
+  b0 <- 270
+  bquery <- 0:359
+  expected <- c(90:180, -179:0, 1:89)
+
+  expect_equal(get_shortest_compass_rotation(b0, bquery), expected)
+})
+
+
+test_that("get_shortest_compass_rotation works with negative bearings", {
+  b0 <- -90
+  bx <- 0:359
+  expected <- c(90:180, -179:0, 1:89)
+
+  expect_equal(get_shortest_compass_rotation(b0, bx), expected)
+
+  b0 <- 90
+  bx <- 0:-359
+  expected <- c(-90:-179, 180:0, -1:-89)
+
+  expect_equal(get_shortest_compass_rotation(b0, bx), expected)
+})
+
+
+test_that("get_shortest_cartesian_rotation works", {
+  a0 <- pi/2
+  ax <- seq(0, 2*pi, pi/4)
+  expected <- c(pi/2, pi/4, 0, -pi/4, -pi/2, -3*pi/4, pi, 3*pi/4, pi/2)
+
+  expect_equal(get_shortest_cartesian_rotation(a0, ax), expected)
+})
+
+
+test_that("get_shortest_cartesian_rotation works with negative angles", {
+  a0 <- pi/2
+  ax <- seq(0, -2*pi, -pi/4)
+  expected <- c(pi/2, 3*pi/4, pi, -3*pi/4, -pi/2, -pi/4, 0, pi/4, pi/2)
+
+  expect_equal(get_shortest_cartesian_rotation(a0, ax), expected)
+})
+
+
 test_that("angle_in_range works", {
   mid <- 270
   halfspan <- 45

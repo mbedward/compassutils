@@ -207,70 +207,153 @@ get_compass_bearing <- function(p0, pquery) {
 }
 
 
-#' Determine if point locations are up-wind of a reference point
+#' Find a target point at a given bearing and distance from a reference point
 #'
-#' Given a single reference point location \code{p0} and one or more query point
-#' locations \code{pquery}, together with a prevailing wind direction, determine
-#' whether each query point is up-wind of the reference point. This function is
-#' simply a short-cut to calling functions \code{get_compass_bearing()} and
-#' \code{angle_in_range()}. To be up-wind, a query point must lie within an
-#' angular range centred on the direction from which the wind is coming. By
-#' default, the range is set to 90 degrees either side of the wind direction,
-#' but this can be decreased for a stricter interpretation of 'up-wind'. To
-#' accord with the standard meteorological convention, the wind direction value
-#' \code{wdir_degrees} should always be expressed as a compass bearing in
-#' degrees, representing the direction from which the wind is blowing, e.g. 270
-#' degrees for a westerly wind with air flow from west to east.
+#' Given a reference point \code{p0}, find the coordinates of a target point
+#' located at a given compass bearing and distance from \code{p0}.
 #'
-#' Note that this function \strong{assumes} that wind direction, \code{wdir},
-#' and the \code{halfspan} arguments are both expressed in degrees.
+#' @note This function currently only useful for points in projected coordinate
+#'   systems, not geographic (longitude, latitude) coordinates.
 #'
 #' @param p0 The reference point. Either a two-element vector of X-Y
 #'   coordinates, an \code{sf} point geometry object, a single element from an
 #'   \code{sfc} point geometry list or a single record from an \code{sf} spatial
 #'   data frame.
 #'
-#' @param pquery One or more query points. If there is only query point it can
-#'   be provided in the same forms as described for \code{p0}. Multiple query
-#'   points can be provided as a matrix of X-Y coordinates, an \code{sfc} point
-#'   geometry list or an \code{sf} spatial data frame.
+#' @param bearing The compass direction from p0 to the target point.
 #'
-#' @param wdir_degrees Wind direction (single numeric value), expressed using
-#'   the standard meteorological convention as the compass direction from which
-#'   the wind is coming, e.g. 270 degrees means a westerly wind with air flow
-#'   from west to east.
+#' @param distance Distance to the new point. Generally, this will be a positive
+#'   value. If zero, the function simply returns the reference point
+#'   coordinates. If negative, a point in the opposite direction to that
+#'   specified by the \code{bearing} will be returned.
 #'
-#' @param halfspan The angular range (degrees) either side of the wind angle for
-#'   a bearing to be considered up-wind. Must be in the range \code{[0, 180]}.
-#'   The default value is 90 degrees for a semi-circle centred on the wind
-#'   direction.
+#' @param degrees (logical) If \code{TRUE} (default), all bearings are treated
+#'   as compass angles in degrees. Set to \code{FALSE} if values should be
+#'   treated as radians.
 #'
-#' @param strict (logical; default FALSE) Whether bearings must be strictly
-#'   within the angular range defined by \code{halfspan}. See
-#'   \code{\link{angle_in_range}} for more explanation.
+#' @return A two-element vector with the coordinates of the target point.
+#'
+#' @examples
+#' # Reference point coordinates (assuming map units are metres)
+#' p0 <- c(305170, 6190800)
+#'
+#' # Find the target point 170 metres from the reference point along a compass
+#' # bearing of 10 degrees (slightly east of north)
+#' #
+#' ptarget <- get_target_point(p0, bearing = 10, distance = 170)
+#' cat("Target point coordinates:", ptarget)
 #'
 #' @export
-#
-is_upwind <- function(p0, pquery, wdir_degrees, halfspan = 90, strict = FALSE) {
-  checkmate::assert_number(wdir_degrees, finite = TRUE)
-  checkmate::assert_number(halfspan, finite = TRUE, lower = 0, upper = 180)
-  checkmate::assert_flag(strict)
+#'
+get_target_point <- function(p0, bearing, distance, degrees = TRUE) {
+  checkmate::assert_number(bearing, finite = TRUE)
+  checkmate::assert_number(distance, finite = TRUE)
 
-  p0_coords <- .points_as_matrix(p0)
-  if (nrow(p0_coords) != 1) stop("There should only be one reference point (p0)")
+  p0 <- .points_as_matrix(p0)
+  if (nrow(p0) != 1) stop("Only one reference point (p0) can be provided")
 
-  p0_CRS <- attr(p0_coords, "crs")
+  # If we know the CRS of the reference point, check that it is projected
+  p0crs <- attr(p0, "crs")
+  if (!is.na(p0crs) && sf::st_is_longlat(p0crs)) {
+    stop("Reference point p0 must have projected coordinates, not geographic (lon-lat)")
+  }
 
-  # Store p0 as a vector rather than a matrix
-  p0_coords <- c(p0_coords)
+  # reduce single-row matrix for reference point coords to a 2-element vector
+  p0 <- c(p0)
 
-  pquery_coords <- .points_as_matrix(pquery)
-  pquery_CRS <- attr(pquery_coords, "crs")
+  bcart <- compass2cartesian(bearing, degrees = degrees)
 
-  sapply(seq_len(nrow(pquery_coords)), function(i) {
-    b <- get_compass_bearing(p0_coords, pquery_coords[i,])
-    angle_in_range(b, wdir_degrees, halfspan, degrees = TRUE, strict = strict)
-  })
+  if (degrees) {
+    bcart <- deg2rad(bcart)
+  }
+
+  p0 + c(distance * cos(bcart), distance * sin(bcart))
+}
+
+
+#' Find the shortest angle of rotation between compass bearings
+#'
+#' Given a reference compass bearing \code{b0} and one or more bearings
+#' \code{bx}, this function determines the shortest angle of rotation from
+#' \code{b0} to each \code{bx}. Positive return values indicate clockwise
+#' rotations, while negative values indicate counter-clockwise rotations. A
+#' positive value will be returned for the 180 degree rotation between two
+#' opposite bearings.
+#'
+#' Adapted from a post by Allan Cameron on
+#' StackOverflow: https://stackoverflow.com/a/63429855/40246.
+#'
+#' @param b0 The reference compass bearing (degrees).
+#' @param bx One or more bearings to compare to \code{b0} (degrees).
+#'
+#' @return A numeric vector the same length as \code{bx} with values for the
+#'   angle of shortest rotation expressed in degrees.
+#'
+#' @examples
+#' # north-west to north-east
+#' get_shortest_compass_rotation(315, 45)  # return 90 (clockwise rotation)
+#'
+#' # north-east to north-west
+#' get_shortest_compass_rotation(45, 315)  # returns -90 (anti-clockwise rotation)
+#'
+#' # Exactly opposite bearings are treated as a clockwise rotation (positive value)
+#' get_shortest_compass_rotation(270, 90)  # returns 180
+#'
+#' # Input bearings outside the usual compass range (0 <= b < 360 degrees) are
+#' # permitted. For example, the query below will return -135 for the counter-
+#' # clockwise rotation from north-west (coded as -45 degrees) to south
+#' #
+#' get_shortest_compass_rotation(-45, 180) # returns -135
+#'
+#' @export
+#'
+get_shortest_compass_rotation <- function(b0, bx) {
+  checkmate::assert_number(b0, finite = TRUE)
+  checkmate::assert_numeric(bx, finite = TRUE, min.len = 1)
+
+  angles <- bx - b0
+  clockwise <- angles %% 360
+  counter_clockwise <- 360 - clockwise
+
+  is_clockwise <- abs(clockwise) <= abs(counter_clockwise)
+  smallest_rotation <- ifelse(is_clockwise, abs(clockwise), -abs(counter_clockwise))
+
+  smallest_rotation
+}
+
+
+#' Find the shortest angle of rotation between Cartesian angles
+#'
+#' Given a reference angle \code{a0} and one or more angles
+#' \code{ax}, this function determines the shortest angle of rotation from
+#' \code{a0} to each \code{ax}. Positive return values indicate clockwise
+#' rotations, while negative values indicate counter-clockwise rotations. A
+#' positive value will be returned for the \code{pi} radians rotation between
+#' two opposite bearings.
+#'
+#' Adapted from a post by Allan Cameron on
+#' StackOverflow: https://stackoverflow.com/a/63429855/40246.
+#'
+#' @param a0 The reference compass bearing (radians).
+#' @param ax One or more bearings to compare to \code{a0} (radians).
+#'
+#' @return A numeric vector the same length as \code{ax} with values for the
+#'   angle of shortest rotation expressed in radians.
+#'
+#' @export
+#'
+get_shortest_cartesian_rotation <- function(a0, ax) {
+  checkmate::assert_number(a0, finite = TRUE)
+  checkmate::assert_numeric(ax, finite = TRUE, min.len = 1)
+
+  angles <- ax - a0
+  counter_clockwise <- angles %% (2*pi)
+  clockwise <- 2*pi - counter_clockwise
+
+  is_clockwise <- abs(clockwise) <= abs(counter_clockwise)
+  smallest_rotation <- ifelse(is_clockwise, abs(clockwise), -abs(counter_clockwise))
+
+  smallest_rotation
 }
 
 
@@ -351,66 +434,68 @@ angle_in_range <- function(x, mid, halfspan, degrees = TRUE, strict = FALSE) {
 }
 
 
-#' Find a target point at a given bearing and distance from a reference point
+#' Determine if point locations are up-wind of a reference point
 #'
-#' Given a reference point \code{p0}, find the coordinates of a target point
-#' located at a given compass bearing and distance from \code{p0}.
+#' Given a single reference point location \code{p0} and one or more query point
+#' locations \code{pquery}, together with a prevailing wind direction, determine
+#' whether each query point is up-wind of the reference point. This function is
+#' simply a short-cut to calling functions \code{get_compass_bearing()} and
+#' \code{angle_in_range()}. To be up-wind, a query point must lie within an
+#' angular range centred on the direction from which the wind is coming. By
+#' default, the range is set to 90 degrees either side of the wind direction,
+#' but this can be decreased for a stricter interpretation of 'up-wind'. To
+#' accord with the standard meteorological convention, the wind direction value
+#' \code{wdir_degrees} should always be expressed as a compass bearing in
+#' degrees, representing the direction from which the wind is blowing, e.g. 270
+#' degrees for a westerly wind with air flow from west to east.
 #'
-#' @note This function currently only useful for points in projected coordinate
-#'   systems, not geographic (longitude, latitude) coordinates.
+#' Note that this function \strong{assumes} that wind direction, \code{wdir},
+#' and the \code{halfspan} arguments are both expressed in degrees.
 #'
 #' @param p0 The reference point. Either a two-element vector of X-Y
 #'   coordinates, an \code{sf} point geometry object, a single element from an
 #'   \code{sfc} point geometry list or a single record from an \code{sf} spatial
 #'   data frame.
 #'
-#' @param bearing The compass direction from p0 to the target point.
+#' @param pquery One or more query points. If there is only query point it can
+#'   be provided in the same forms as described for \code{p0}. Multiple query
+#'   points can be provided as a matrix of X-Y coordinates, an \code{sfc} point
+#'   geometry list or an \code{sf} spatial data frame.
 #'
-#' @param distance Distance to the new point. Generally, this will be a positive
-#'   value. If zero, the function simply returns the reference point
-#'   coordinates. If negative, a point in the opposite direction to that
-#'   specified by the \code{bearing} will be returned.
+#' @param wdir_degrees Wind direction (single numeric value), expressed using
+#'   the standard meteorological convention as the compass direction from which
+#'   the wind is coming, e.g. 270 degrees means a westerly wind with air flow
+#'   from west to east.
 #'
-#' @param degrees (logical) If \code{TRUE} (default), all bearings are treated
-#'   as compass angles in degrees. Set to \code{FALSE} if values should be
-#'   treated as radians.
+#' @param halfspan The angular range (degrees) either side of the wind angle for
+#'   a bearing to be considered up-wind. Must be in the range \code{[0, 180]}.
+#'   The default value is 90 degrees for a semi-circle centred on the wind
+#'   direction.
 #'
-#' @return A two-element vector with the coordinates of the target point.
-#'
-#' @examples
-#' # Reference point coordinates (assuming map units are metres)
-#' p0 <- c(305170, 6190800)
-#'
-#' # Find the target point 170 metres from the reference point along a compass
-#' # bearing of 10 degrees (slightly east of north)
-#' #
-#' ptarget <- get_target_point(p0, bearing = 10, distance = 170)
-#' cat("Target point coordinates:", ptarget)
+#' @param strict (logical; default FALSE) Whether bearings must be strictly
+#'   within the angular range defined by \code{halfspan}. See
+#'   \code{\link{angle_in_range}} for more explanation.
 #'
 #' @export
-#'
-get_target_point <- function(p0, bearing, distance, degrees = TRUE) {
-  checkmate::assert_number(bearing, finite = TRUE)
-  checkmate::assert_number(distance, finite = TRUE)
+#
+is_upwind <- function(p0, pquery, wdir_degrees, halfspan = 90, strict = FALSE) {
+  checkmate::assert_number(wdir_degrees, finite = TRUE)
+  checkmate::assert_number(halfspan, finite = TRUE, lower = 0, upper = 180)
+  checkmate::assert_flag(strict)
 
-  p0 <- .points_as_matrix(p0)
-  if (nrow(p0) != 1) stop("Only one reference point (p0) can be provided")
+  p0_coords <- .points_as_matrix(p0)
+  if (nrow(p0_coords) != 1) stop("There should only be one reference point (p0)")
 
-  # If we know the CRS of the reference point, check that it is projected
-  p0crs <- attr(p0, "crs")
-  if (!is.na(p0crs) && sf::st_is_longlat(p0crs)) {
-    stop("Reference point p0 must have projected coordinates, not geographic (lon-lat)")
-  }
+  p0_CRS <- attr(p0_coords, "crs")
 
-  # reduce single-row matrix for reference point coords to a 2-element vector
-  p0 <- c(p0)
+  # Store p0 as a vector rather than a matrix
+  p0_coords <- c(p0_coords)
 
-  bcart <- compass2cartesian(bearing, degrees = degrees)
+  pquery_coords <- .points_as_matrix(pquery)
+  pquery_CRS <- attr(pquery_coords, "crs")
 
-  if (degrees) {
-    bcart <- deg2rad(bcart)
-  }
-
-  p0 + c(distance * cos(bcart), distance * sin(bcart))
+  sapply(seq_len(nrow(pquery_coords)), function(i) {
+    b <- get_compass_bearing(p0_coords, pquery_coords[i,])
+    angle_in_range(b, wdir_degrees, halfspan, degrees = TRUE, strict = strict)
+  })
 }
-
